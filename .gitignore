@@ -9,3 +9,5 @@ scheduler.db
 test_scheduler.db
 uploads/*
 !uploads/.gitkeep
+
+.vercel
