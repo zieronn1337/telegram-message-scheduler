@@ -1,0 +1,11 @@
+.env*
+!.env.example
+!.env.vercel.example
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+scheduler.db
+test_scheduler.db
+uploads/*
+!uploads/.gitkeep

@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file: .env
+    volumes:
+      - scheduler_data:/app/uploads
+      - scheduler_db:/app/data
+    environment:
+      DATABASE_URL: sqlite:////app/data/scheduler.db
+    restart: unless-stopped
+
+volumes:
+  scheduler_data:
+  scheduler_db:
+
