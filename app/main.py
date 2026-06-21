@@ -10,6 +10,7 @@ from .api import router as api_router
 from .auth import hash_password
 from .config import settings
 from .database import Base, SessionLocal, engine
+from sqlalchemy import inspect, text
 from .models import Agency, User, UserRole
 from .scheduler import restore_jobs, scheduler
 from .web import router as web_router
@@ -17,6 +18,11 @@ from .web import router as web_router
 
 def bootstrap() -> None:
     Base.metadata.create_all(engine)
+    columns = {column["name"] for column in inspect(engine).get_columns("post_media")}
+    if "file_data" not in columns:
+        column_type = "BYTEA" if engine.dialect.name == "postgresql" else "BLOB"
+        with engine.begin() as connection:
+            connection.execute(text(f"ALTER TABLE post_media ADD COLUMN file_data {column_type}"))
     settings.uploads_path.mkdir(parents=True, exist_ok=True)
     db = SessionLocal()
     try:

@@ -1,6 +1,6 @@
 # Полный деплой Telegram Message Scheduler на Vercel
 
-Эта инструкция рассчитана на первый деплой. Выполняйте шаги по порядку: GitHub → PostgreSQL → Cloudinary → Vercel → cron → Telegram.
+Эта инструкция рассчитана на первый деплой. Выполняйте шаги по порядку: GitHub → PostgreSQL → Vercel → cron → Telegram. Cloudinary опционален.
 
 ## Что понадобится
 
@@ -9,7 +9,7 @@
 - [GitHub](https://github.com) — хранение кода;
 - [Vercel](https://vercel.com) — запуск FastAPI;
 - [Neon](https://neon.tech) или [Supabase](https://supabase.com) — PostgreSQL;
-- [Cloudinary](https://cloudinary.com) — хранение фото, видео и документов;
+- [Cloudinary](https://cloudinary.com) — опциональное внешнее хранение медиа;
 - [cron-job.org](https://cron-job.org) — минутный cron, если ваш тариф Vercel не поддерживает нужную частоту;
 - Telegram и `@BotFather` — создание бота.
 
@@ -24,7 +24,7 @@ Vercel запускает FastAPI как serverless-функцию. Между H
 Проект уже адаптирован:
 
 - PostgreSQL хранит пользователей, каналы и публикации;
-- Cloudinary хранит медиа;
+- Neon хранит небольшие медиа; Cloudinary можно подключить позднее;
 - cron вызывает `/api/cron/process` и запускает готовые публикации;
 - `api/index.py` экспортирует FastAPI-приложение для Vercel;
 - `vercel.json` отправляет все маршруты в Python Function.
@@ -130,7 +130,7 @@ postgresql://USER:PASSWORD@HOST/DBNAME?sslmode=require
 
 ## Шаг 4. Настроить Cloudinary
 
-Cloudinary требуется для публикаций с медиа на Vercel.
+Cloudinary опционален. Без него медиа до `MAX_UPLOAD_MB` сохраняются в Neon PostgreSQL.
 
 1. Откройте Cloudinary Console.
 2. На Dashboard найдите **Cloud name**.
@@ -325,7 +325,7 @@ Bot Token не добавляется в GitHub или Vercel Environment Variab
 - [ ] Telegram Bot Token успешно проверяется;
 - [ ] канал добавляется без ошибки доступа;
 - [ ] текстовый пост «Отправить сейчас» появляется в канале;
-- [ ] небольшое изображение загружается через Cloudinary;
+- [ ] небольшое изображение сохраняется и отправляется;
 - [ ] тестовый пост запланирован на 2–3 минуты вперёд;
 - [ ] cron возвращает HTTP 200;
 - [ ] запланированный пост появляется в Telegram;

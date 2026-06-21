@@ -68,7 +68,10 @@ async def send_post(post: Post) -> list[int]:
             "video": ("sendVideo", "video"),
             "document": ("sendDocument", "document"),
         }[item.media_type]
-        if item.file_path.startswith("https://"):
+        if item.file_data:
+            file_value = (item.original_name, item.file_data, item.mime_type or "application/octet-stream")
+            result = await api_call(token, method, data={**base, "caption": post.text, "reply_markup": markup or ""}, files={field: file_value})
+        elif item.file_path.startswith("https://"):
             async with httpx.AsyncClient(timeout=120) as client:
                 content = (await client.get(item.file_path)).raise_for_status().content
             file_value = (item.original_name, content, item.mime_type or "application/octet-stream")
@@ -86,7 +89,9 @@ async def send_post(post: Post) -> list[int]:
         try:
             for index, item in enumerate(group_items[:10]):
                 key = f"file{index}"
-                if item.file_path.startswith("https://"):
+                if item.file_data:
+                    files[key] = (item.original_name, item.file_data, item.mime_type or "application/octet-stream")
+                elif item.file_path.startswith("https://"):
                     async with httpx.AsyncClient(timeout=120) as client:
                         content = (await client.get(item.file_path)).raise_for_status().content
                     files[key] = (item.original_name, content, item.mime_type or "application/octet-stream")
@@ -104,7 +109,9 @@ async def send_post(post: Post) -> list[int]:
             for stream in streams:
                 stream.close()
     for item in [item for item in media if item.media_type == "document"]:
-        if item.file_path.startswith("https://"):
+        if item.file_data:
+            result = await api_call(token, "sendDocument", data=base, files={"document": (item.original_name, item.file_data, item.mime_type)})
+        elif item.file_path.startswith("https://"):
             async with httpx.AsyncClient(timeout=120) as client:
                 content = (await client.get(item.file_path)).raise_for_status().content
             result = await api_call(token, "sendDocument", data=base, files={"document": (item.original_name, content, item.mime_type)})

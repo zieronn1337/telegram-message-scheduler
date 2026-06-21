@@ -203,28 +203,30 @@ def save_uploads(db: Session, post: Post, files: list[UploadFile]) -> None:
         ext = Path(upload.filename).suffix.lower()
         kind = "photo" if (upload.content_type or "").startswith("image/") else "video" if (upload.content_type or "").startswith("video/") else "document"
         if settings.is_serverless:
-            if not settings.cloudinary_cloud_name or not settings.cloudinary_upload_preset:
-                raise ValueError("Для загрузки медиа на Vercel настройте CLOUDINARY_CLOUD_NAME и CLOUDINARY_UPLOAD_PRESET")
-            import httpx
-
             content = upload.file.read(settings.max_upload_mb * 1024 * 1024 + 1)
             if len(content) > settings.max_upload_mb * 1024 * 1024:
                 raise ValueError(f"Файл {upload.filename} превышает лимит")
-            response = httpx.post(
-                f"https://api.cloudinary.com/v1_1/{settings.cloudinary_cloud_name}/auto/upload",
-                data={"upload_preset": settings.cloudinary_upload_preset, "folder": f"telegram-scheduler/{post.agency_id}/{post.id}"},
-                files={"file": (upload.filename, content, upload.content_type)},
-                timeout=120,
-            )
-            response.raise_for_status()
-            file_path = response.json()["secure_url"]
+            if settings.cloudinary_cloud_name and settings.cloudinary_upload_preset:
+                import httpx
+
+                response = httpx.post(
+                    f"https://api.cloudinary.com/v1_1/{settings.cloudinary_cloud_name}/auto/upload",
+                    data={"upload_preset": settings.cloudinary_upload_preset, "folder": f"telegram-scheduler/{post.agency_id}/{post.id}"},
+                    files={"file": (upload.filename, content, upload.content_type)},
+                    timeout=120,
+                )
+                response.raise_for_status()
+                file_path, file_data = response.json()["secure_url"], None
+            else:
+                file_path, file_data = "database", content
         else:
             path = target / f"{uuid.uuid4().hex}{ext}"
             with path.open("wb") as output: shutil.copyfileobj(upload.file, output)
             if path.stat().st_size > settings.max_upload_mb * 1024 * 1024:
                 path.unlink(missing_ok=True); raise ValueError(f"Файл {upload.filename} превышает лимит")
             file_path = str(path)
-        db.add(PostMedia(post_id=post.id, file_path=file_path, original_name=upload.filename, media_type=kind, mime_type=upload.content_type, position=index))
+            file_data = None
+        db.add(PostMedia(post_id=post.id, file_path=file_path, file_data=file_data, original_name=upload.filename, media_type=kind, mime_type=upload.content_type, position=index))
 
 
 @router.post("/posts/new")
@@ -274,7 +276,7 @@ async def post_action(post_id: int, request: Request, action: str = Form(), db: 
         clone = Post(agency_id=post.agency_id, channel_id=post.channel_id, author_id=user.id, text=post.text, parse_mode=post.parse_mode, button_text=post.button_text, button_url=post.button_url, timezone=post.timezone)
         db.add(clone); db.flush()
         for item in post.media:
-            db.add(PostMedia(post_id=clone.id, file_path=item.file_path, original_name=item.original_name, media_type=item.media_type, mime_type=item.mime_type, position=item.position))
+            db.add(PostMedia(post_id=clone.id, file_path=item.file_path, file_data=item.file_data, original_name=item.original_name, media_type=item.media_type, mime_type=item.mime_type, position=item.position))
         db.commit(); flash(request, "Создана копия поста")
     return RedirectResponse(request.headers.get("referer", "/posts"), 303)
 

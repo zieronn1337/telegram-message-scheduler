@@ -1,7 +1,7 @@
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, LargeBinary, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -99,6 +99,7 @@ class PostMedia(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"), index=True)
     file_path: Mapped[str] = mapped_column(String(500))
+    file_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     original_name: Mapped[str] = mapped_column(String(255))
     media_type: Mapped[str] = mapped_column(String(30))
     mime_type: Mapped[str | None] = mapped_column(String(120))
