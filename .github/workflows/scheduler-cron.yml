@@ -1,0 +1,20 @@
+name: Process scheduled Telegram posts
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Call scheduler endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          curl --fail --silent --show-error \
+            --retry 2 \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            https://telegram-message-scheduler.vercel.app/api/cron/process
