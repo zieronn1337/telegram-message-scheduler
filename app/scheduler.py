@@ -16,28 +16,49 @@ logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler(timezone="UTC")
 
 
-async def deliver_post(post_id: int) -> None:
+async def deliver_post(post_id: int) -> PostStatus | None:
     db = SessionLocal()
     try:
         post = db.get(Post, post_id)
-        if not post or post.status not in {PostStatus.SCHEDULED, PostStatus.PROCESSING, PostStatus.ERROR}:
-            return
+        if not post or post.status not in {
+            PostStatus.SCHEDULED,
+            PostStatus.PROCESSING,
+            PostStatus.ERROR,
+        }:
+            return None
         try:
             message_ids = await send_post(post)
             post.status = PostStatus.SENT
             post.sent_at = datetime.now(timezone.utc)
             post.telegram_message_ids = json.dumps(message_ids)
             post.error_message = None
-            db.add(Log(agency_id=post.agency_id, post_id=post.id, level="INFO", event="post_sent", message="Пост успешно отправлен"))
+            db.add(
+                Log(
+                    agency_id=post.agency_id,
+                    post_id=post.id,
+                    level="INFO",
+                    event="post_sent",
+                    message="Пост успешно отправлен",
+                )
+            )
         except Exception as exc:
             logger.exception("Failed to send post %s", post_id)
             post.status = PostStatus.ERROR
             post.error_message = str(exc)[:2000]
-            db.add(Log(agency_id=post.agency_id, post_id=post.id, level="ERROR", event="post_failed", message=str(exc)[:4000]))
+            db.add(
+                Log(
+                    agency_id=post.agency_id,
+                    post_id=post.id,
+                    level="ERROR",
+                    event="post_failed",
+                    message=str(exc)[:4000],
+                )
+            )
         task = db.query(ScheduledTask).filter_by(post_id=post_id).first()
         if task:
             db.delete(task)
         db.commit()
+        return post.status
     finally:
         db.close()
 
@@ -56,7 +77,14 @@ def schedule_post(db, post: Post) -> None:
         raise ValueError("Время публикации должно быть в будущем")
     job_id = f"post-{post.id}"
     if not settings.is_serverless:
-        scheduler.add_job(_run, DateTrigger(run_date=run_at), args=[post.id], id=job_id, replace_existing=True, misfire_grace_time=3600)
+        scheduler.add_job(
+            _run,
+            DateTrigger(run_date=run_at),
+            args=[post.id],
+            id=job_id,
+            replace_existing=True,
+            misfire_grace_time=3600,
+        )
     task = db.query(ScheduledTask).filter_by(post_id=post.id).first()
     if task:
         task.job_id, task.run_at = job_id, run_at
@@ -87,7 +115,14 @@ def restore_jobs() -> None:
                 continue
             if run_at.tzinfo is None:
                 run_at = run_at.replace(tzinfo=timezone.utc)
-            scheduler.add_job(_run, DateTrigger(run_date=max(run_at, now)), args=[post.id], id=f"post-{post.id}", replace_existing=True, misfire_grace_time=3600)
+            scheduler.add_job(
+                _run,
+                DateTrigger(run_date=max(run_at, now)),
+                args=[post.id],
+                id=f"post-{post.id}",
+                replace_existing=True,
+                misfire_grace_time=3600,
+            )
     finally:
         db.close()
 
@@ -98,16 +133,31 @@ async def process_due_posts(limit: int = 20) -> dict:
     try:
         now = datetime.now(timezone.utc)
         stale = now - timedelta(minutes=15)
-        query = db.query(Post).filter(
-            Post.scheduled_at <= now,
-            or_(Post.status == PostStatus.SCHEDULED, (Post.status == PostStatus.PROCESSING) & (Post.updated_at <= stale)),
-        ).order_by(Post.scheduled_at).limit(limit)
+        query = (
+            db.query(Post)
+            .filter(
+                Post.scheduled_at <= now,
+                or_(
+                    Post.status == PostStatus.SCHEDULED,
+                    (Post.status == PostStatus.PROCESSING) & (Post.updated_at <= stale),
+                ),
+            )
+            .order_by(Post.scheduled_at)
+            .limit(limit)
+        )
         post_ids = [post.id for post in query.all()]
         claimed_ids = []
         for post_id in post_ids:
             result = db.execute(
                 update(Post)
-                .where(Post.id == post_id, or_(Post.status == PostStatus.SCHEDULED, (Post.status == PostStatus.PROCESSING) & (Post.updated_at <= stale)))
+                .where(
+                    Post.id == post_id,
+                    or_(
+                        Post.status == PostStatus.SCHEDULED,
+                        (Post.status == PostStatus.PROCESSING)
+                        & (Post.updated_at <= stale),
+                    ),
+                )
                 .values(status=PostStatus.PROCESSING, updated_at=now)
             )
             if result.rowcount:

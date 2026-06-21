@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Ошибка {{ status_code }} — TelePlan{% endblock %}
+{% block auth_content %}
+<div class="login-page">
+  <div class="login-card text-center">
+    <div class="brand justify-content-center mb-4"><span class="brand-icon"><i class="bi bi-exclamation-triangle"></i></span><span>TelePlan</span></div>
+    <h2>Ошибка {{ status_code }}</h2>
+    <p class="text-secondary">{{ message }}</p>
+    <a class="btn btn-primary w-100" href="/">Вернуться в панель</a>
+  </div>
+</div>
+{% endblock %}

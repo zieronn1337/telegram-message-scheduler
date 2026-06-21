@@ -29,7 +29,9 @@ class Settings(BaseSettings):
         import base64
         import hashlib
 
-        return base64.urlsafe_b64encode(hashlib.sha256(self.secret_key.encode()).digest())
+        return base64.urlsafe_b64encode(
+            hashlib.sha256(self.secret_key.encode()).digest()
+        )
 
     @property
     def uploads_path(self) -> Path:

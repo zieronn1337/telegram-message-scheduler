@@ -1,0 +1,9 @@
+.status-processing {
+  background: #fff3bf;
+  color: #9c6500;
+}
+
+.dropdown-item.text-danger:hover {
+  background: #fff0f1;
+  color: #c92a2a;
+}

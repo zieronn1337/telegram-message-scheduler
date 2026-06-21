@@ -1,7 +1,16 @@
 import enum
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, LargeBinary, String, Text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    LargeBinary,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .database import Base
@@ -31,7 +40,9 @@ class Agency(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(150), unique=True)
     contact_info: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
     users: Mapped[list["User"]] = relationship(back_populates="agency")
 
 
@@ -42,9 +53,13 @@ class User(Base):
     email: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
     password_hash: Mapped[str] = mapped_column(String(255))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.MANAGER)
-    agency_id: Mapped[int | None] = mapped_column(ForeignKey("agencies.id"), nullable=True)
+    agency_id: Mapped[int | None] = mapped_column(
+        ForeignKey("agencies.id"), nullable=True
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
     agency: Mapped[Agency | None] = relationship(back_populates="users")
 
 
@@ -56,7 +71,9 @@ class TelegramBot(Base):
     username: Mapped[str | None] = mapped_column(String(120))
     encrypted_token: Mapped[str] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
 
 
 class TelegramChannel(Base):
@@ -75,29 +92,43 @@ class Post(Base):
     __tablename__ = "posts"
     id: Mapped[int] = mapped_column(primary_key=True)
     agency_id: Mapped[int] = mapped_column(ForeignKey("agencies.id"), index=True)
-    channel_id: Mapped[int] = mapped_column(ForeignKey("telegram_channels.id"), index=True)
+    channel_id: Mapped[int] = mapped_column(
+        ForeignKey("telegram_channels.id"), index=True
+    )
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     text: Mapped[str] = mapped_column(Text, default="")
     parse_mode: Mapped[str] = mapped_column(String(20), default="HTML")
     button_text: Mapped[str | None] = mapped_column(String(100))
     button_url: Mapped[str | None] = mapped_column(String(500))
     timezone: Mapped[str] = mapped_column(String(64), default="UTC")
-    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    scheduled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), index=True
+    )
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    status: Mapped[PostStatus] = mapped_column(Enum(PostStatus), default=PostStatus.DRAFT, index=True)
+    status: Mapped[PostStatus] = mapped_column(
+        Enum(PostStatus), default=PostStatus.DRAFT, index=True
+    )
     telegram_message_ids: Mapped[str | None] = mapped_column(Text)
     error_message: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
     channel: Mapped[TelegramChannel] = relationship()
     author: Mapped[User] = relationship()
-    media: Mapped[list["PostMedia"]] = relationship(back_populates="post", cascade="all, delete-orphan")
+    media: Mapped[list["PostMedia"]] = relationship(
+        back_populates="post", cascade="all, delete-orphan"
+    )
 
 
 class PostMedia(Base):
     __tablename__ = "post_media"
     id: Mapped[int] = mapped_column(primary_key=True)
-    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id", ondelete="CASCADE"), index=True)
+    post_id: Mapped[int] = mapped_column(
+        ForeignKey("posts.id", ondelete="CASCADE"), index=True
+    )
     file_path: Mapped[str] = mapped_column(String(500))
     file_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     original_name: Mapped[str] = mapped_column(String(255))
@@ -110,10 +141,14 @@ class PostMedia(Base):
 class ScheduledTask(Base):
     __tablename__ = "scheduled_tasks"
     id: Mapped[int] = mapped_column(primary_key=True)
-    post_id: Mapped[int] = mapped_column(ForeignKey("posts.id"), unique=True, index=True)
+    post_id: Mapped[int] = mapped_column(
+        ForeignKey("posts.id"), unique=True, index=True
+    )
     job_id: Mapped[str] = mapped_column(String(120), unique=True)
     run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow
+    )
 
 
 class Log(Base):
@@ -125,4 +160,6 @@ class Log(Base):
     level: Mapped[str] = mapped_column(String(20), default="INFO")
     event: Mapped[str] = mapped_column(String(100))
     message: Mapped[str] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, index=True
+    )

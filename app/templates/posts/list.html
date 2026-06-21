@@ -1,2 +1,30 @@
-{% extends "base.html" %}{% block page_title %}Расписание{% endblock %}{% block page_subtitle %}Все публикации и черновики{% endblock %}
-{% block content %}<div class="panel"><form class="filters" method="get"><input class="form-control" name="search" value="{{filters.search}}" placeholder="Поиск по тексту"><select class="form-select" name="channel_id"><option value="">Все каналы</option>{% for channel in channels %}<option value="{{channel.id}}" {{'selected' if filters.channel_id==channel.id}}>{{channel.title}}</option>{% endfor %}</select><select class="form-select" name="status"><option value="">Все статусы</option>{% for status in statuses %}<option value="{{status.value}}" {{'selected' if filters.status==status.value}}>{{status.value}}</option>{% endfor %}</select><button class="btn btn-primary">Фильтр</button></form><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Публикация</th><th>Канал</th><th>Дата</th><th>Статус</th><th></th></tr></thead><tbody>{% for post in posts %}<tr><td><b>{{post.text|striptags|truncate(65) or 'Медиа-публикация'}}</b><small class="d-block">{{post.media|length}} медиа · {{post.author.username}}</small></td><td>{{post.channel.title}}</td><td>{{post.scheduled_at.strftime('%d.%m.%Y %H:%M') if post.scheduled_at else 'Не задано'}}</td><td><span class="badge status-{{post.status.value}}">{{post.status.value}}</span>{% if post.error_message %}<i class="bi bi-info-circle text-danger" title="{{post.error_message}}"></i>{% endif %}</td><td><div class="dropdown"><button class="btn btn-light btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button><div class="dropdown-menu dropdown-menu-end">{% if post.status.value != 'sent' %}<a class="dropdown-item" href="/posts/{{post.id}}/edit">Редактировать</a>{% endif %}<form method="post" action="/posts/{{post.id}}/action"><button class="dropdown-item" name="action" value="duplicate">Дублировать</button>{% if post.status.value != 'sent' %}<button class="dropdown-item" name="action" value="send">Отправить сейчас</button>{% endif %}{% if post.status.value == 'scheduled' %}<button class="dropdown-item text-danger" name="action" value="cancel">Отменить</button>{% endif %}</form></div></div></td></tr>{% else %}<tr><td colspan="5"><div class="empty"><i class="bi bi-inbox"></i><p>Публикации не найдены</p></div></td></tr>{% endfor %}</tbody></table></div></div>{% endblock %}
+{% extends "base.html" %}
+{% block page_title %}Расписание{% endblock %}
+{% block page_subtitle %}Все публикации и черновики{% endblock %}
+{% block content %}
+<div class="panel">
+  <form class="filters" method="get">
+    <input class="form-control" name="search" value="{{ filters.search }}" placeholder="Поиск по тексту">
+    <select class="form-select" name="channel_id"><option value="">Все каналы</option>{% for channel in channels %}<option value="{{ channel.id }}" {{ 'selected' if filters.channel_id == channel.id }}>{{ channel.title }}</option>{% endfor %}</select>
+    <select class="form-select" name="status"><option value="">Все статусы</option>{% for status in statuses %}<option value="{{ status.value }}" {{ 'selected' if filters.status == status.value }}>{{ status.value }}</option>{% endfor %}</select>
+    <button class="btn btn-primary">Фильтр</button>
+  </form>
+  <div class="table-responsive"><table class="table align-middle">
+    <thead><tr><th>Публикация</th><th>Канал</th><th>Дата</th><th>Статус</th><th></th></tr></thead>
+    <tbody>{% for post in posts %}<tr>
+      <td><b>{{ post.text|striptags|truncate(65) or 'Медиа-публикация' }}</b><small class="d-block">{{ post.media|length }} медиа · {{ post.author.username }}</small></td>
+      <td>{{ post.channel.title }}</td><td>{{ post.scheduled_at.strftime('%d.%m.%Y %H:%M') if post.scheduled_at else 'Не задано' }}</td>
+      <td><span class="badge status-{{ post.status.value }}">{{ post.status.value }}</span>{% if post.error_message %}<i class="bi bi-info-circle text-danger" title="{{ post.error_message }}"></i>{% endif %}</td>
+      <td><div class="dropdown"><button class="btn btn-light btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button><div class="dropdown-menu dropdown-menu-end">
+        {% if post.status.value not in ['sent', 'processing'] %}<a class="dropdown-item" href="/posts/{{ post.id }}/edit">Редактировать</a>{% endif %}
+        <form method="post" action="/posts/{{ post.id }}/action">
+          <button class="dropdown-item" name="action" value="duplicate">Дублировать</button>
+          {% if post.status.value not in ['sent', 'processing'] %}<button class="dropdown-item" name="action" value="send">{{ 'Повторить отправку' if post.status.value == 'error' else 'Отправить сейчас' }}</button>{% endif %}
+          {% if post.status.value == 'scheduled' %}<button class="dropdown-item" name="action" value="cancel">Отменить</button>{% endif %}
+          {% if post.status.value not in ['sent', 'processing'] %}<button class="dropdown-item text-danger" name="action" value="delete" onclick="return confirm('Удалить публикацию?')">Удалить</button>{% endif %}
+        </form>
+      </div></div></td>
+    </tr>{% else %}<tr><td colspan="5"><div class="empty"><i class="bi bi-inbox"></i><p>Публикации не найдены</p></div></td></tr>{% endfor %}</tbody>
+  </table></div>
+</div>
+{% endblock %}

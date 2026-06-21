@@ -68,4 +68,3 @@ class UserCreate(BaseModel):
     email: str | None = None
     role: UserRole = UserRole.MANAGER
     agency_id: int | None = None
-

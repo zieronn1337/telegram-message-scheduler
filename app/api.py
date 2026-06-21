@@ -1,14 +1,20 @@
-from datetime import datetime, timezone
-
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from .auth import authenticate, create_access_token, current_user, enforce_agency
 from .database import get_db
-from .models import Post, PostStatus, TelegramChannel, User
+from .models import Log, Post, PostMedia, PostStatus, TelegramChannel, User
 from .scheduler import cancel_post, deliver_post, process_due_posts, schedule_post
 from .config import settings
-from .schemas import ChannelOut, LoginRequest, PostCreate, PostOut, PostUpdate, ScheduleRequest, TokenResponse
+from .schemas import (
+    ChannelOut,
+    LoginRequest,
+    PostCreate,
+    PostOut,
+    PostUpdate,
+    ScheduleRequest,
+    TokenResponse,
+)
 
 router = APIRouter(prefix="/api", tags=["API"])
 
@@ -65,11 +71,19 @@ def posts(
 
 
 @router.post("/posts", response_model=PostOut, status_code=201)
-def create_post(payload: PostCreate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def create_post(
+    payload: PostCreate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
     channel = db.get(TelegramChannel, payload.channel_id)
     if not channel:
         raise HTTPException(404, "Канал не найден")
     enforce_agency(user, channel.agency_id)
+    if not channel.is_active or not channel.bot.is_active:
+        raise HTTPException(409, "Канал или Telegram-бот отключён")
+    if not payload.text.strip():
+        raise HTTPException(422, "Для API-публикации без медиа требуется текст")
     post = Post(
         agency_id=channel.agency_id,
         channel_id=channel.id,
@@ -93,10 +107,15 @@ def create_post(payload: PostCreate, user: User = Depends(current_user), db: Ses
 
 
 @router.patch("/posts/{post_id}", response_model=PostOut)
-def update_post(post_id: int, payload: PostUpdate, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def update_post(
+    post_id: int,
+    payload: PostUpdate,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
     post = get_post(db, user, post_id)
-    if post.status == PostStatus.SENT:
-        raise HTTPException(409, "Отправленный пост нельзя изменить")
+    if post.status in {PostStatus.SENT, PostStatus.PROCESSING}:
+        raise HTTPException(409, "Отправляемый или отправленный пост нельзя изменить")
     values = payload.model_dump(exclude_unset=True)
     if "button_url" in values and values["button_url"]:
         values["button_url"] = str(values["button_url"])
@@ -105,6 +124,9 @@ def update_post(post_id: int, payload: PostUpdate, user: User = Depends(current_
         if not channel:
             raise HTTPException(404, "Канал не найден")
         enforce_agency(user, channel.agency_id)
+        if not channel.is_active or not channel.bot.is_active:
+            raise HTTPException(409, "Канал или Telegram-бот отключён")
+        post.agency_id = channel.agency_id
     for key, value in values.items():
         setattr(post, key, value)
     if post.status == PostStatus.SCHEDULED:
@@ -118,17 +140,31 @@ def update_post(post_id: int, payload: PostUpdate, user: User = Depends(current_
 
 
 @router.delete("/posts/{post_id}", status_code=204)
-def delete_post(post_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def delete_post(
+    post_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)
+):
     post = get_post(db, user, post_id)
+    if post.status in {PostStatus.SENT, PostStatus.PROCESSING}:
+        raise HTTPException(409, "Отправленные публикации сохраняются в истории")
     if post.status == PostStatus.SCHEDULED:
         cancel_post(db, post)
+    db.query(Log).filter(Log.post_id == post.id).delete(synchronize_session=False)
     db.delete(post)
     db.commit()
 
 
 @router.post("/posts/{post_id}/schedule", response_model=PostOut)
-def schedule(post_id: int, payload: ScheduleRequest, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def schedule(
+    post_id: int,
+    payload: ScheduleRequest,
+    user: User = Depends(current_user),
+    db: Session = Depends(get_db),
+):
     post = get_post(db, user, post_id)
+    if post.status in {PostStatus.SENT, PostStatus.PROCESSING}:
+        raise HTTPException(409, "Публикацию уже нельзя планировать")
+    if not post.channel.is_active or not post.channel.bot.is_active:
+        raise HTTPException(409, "Канал или Telegram-бот отключён")
     post.scheduled_at, post.timezone = payload.scheduled_at, payload.timezone
     try:
         schedule_post(db, post)
@@ -140,8 +176,12 @@ def schedule(post_id: int, payload: ScheduleRequest, user: User = Depends(curren
 
 
 @router.post("/posts/{post_id}/cancel", response_model=PostOut)
-def cancel(post_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def cancel(
+    post_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)
+):
     post = get_post(db, user, post_id)
+    if post.status != PostStatus.SCHEDULED:
+        raise HTTPException(409, "Отменить можно только запланированную публикацию")
     cancel_post(db, post)
     db.commit()
     db.refresh(post)
@@ -149,8 +189,14 @@ def cancel(post_id: int, user: User = Depends(current_user), db: Session = Depen
 
 
 @router.post("/posts/{post_id}/send-now", status_code=202)
-async def send_now(post_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+async def send_now(
+    post_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)
+):
     post = get_post(db, user, post_id)
+    if post.status in {PostStatus.SENT, PostStatus.PROCESSING}:
+        raise HTTPException(409, "Публикация уже отправлена или отправляется")
+    if not post.channel.is_active or not post.channel.bot.is_active:
+        raise HTTPException(409, "Канал или Telegram-бот отключён")
     if post.status == PostStatus.SCHEDULED:
         cancel_post(db, post)
         post.status = PostStatus.SCHEDULED
@@ -158,15 +204,46 @@ async def send_now(post_id: int, user: User = Depends(current_user), db: Session
     elif post.status in {PostStatus.DRAFT, PostStatus.ERROR, PostStatus.CANCELLED}:
         post.status = PostStatus.SCHEDULED
         db.commit()
-    await deliver_post(post.id)
-    return {"detail": "Отправка выполнена"}
+    result = await deliver_post(post.id)
+    if result == PostStatus.ERROR:
+        raise HTTPException(
+            502, "Telegram не принял публикацию; подробности сохранены в истории"
+        )
+    return {
+        "detail": "Публикация отправлена",
+        "status": result.value if result else None,
+    }
 
 
 @router.post("/posts/{post_id}/duplicate", response_model=PostOut, status_code=201)
-def duplicate(post_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def duplicate(
+    post_id: int, user: User = Depends(current_user), db: Session = Depends(get_db)
+):
     source = get_post(db, user, post_id)
-    clone = Post(agency_id=source.agency_id, channel_id=source.channel_id, author_id=user.id, text=source.text, parse_mode=source.parse_mode, button_text=source.button_text, button_url=source.button_url, timezone=source.timezone)
+    clone = Post(
+        agency_id=source.agency_id,
+        channel_id=source.channel_id,
+        author_id=user.id,
+        text=source.text,
+        parse_mode=source.parse_mode,
+        button_text=source.button_text,
+        button_url=source.button_url,
+        timezone=source.timezone,
+    )
     db.add(clone)
+    db.flush()
+    for item in source.media:
+        db.add(
+            PostMedia(
+                post_id=clone.id,
+                file_path=item.file_path,
+                file_data=item.file_data,
+                original_name=item.original_name,
+                media_type=item.media_type,
+                mime_type=item.mime_type,
+                position=item.position,
+            )
+        )
     db.commit()
     db.refresh(clone)
     return clone

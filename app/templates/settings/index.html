@@ -1,3 +1,17 @@
-{% extends "base.html" %}{% block page_title %}Настройки{% endblock %}{% block page_subtitle %}Агентства и параметры системы{% endblock %}
-{% block content %}<div class="row g-4"><div class="col-xl-8"><div class="panel"><div class="panel-head"><h3>Агентства</h3></div><div class="table-responsive"><table class="table"><thead><tr><th>ID</th><th>Название</th><th>Контакты</th><th>Пользователи</th></tr></thead><tbody>{% for a in agencies %}<tr><td>{{a.id}}</td><td><b>{{a.name}}</b></td><td>{{a.contact_info or '—'}}</td><td>{{a.users|length}}</td></tr>{% else %}<tr><td colspan="4" class="text-center py-4">Агентств пока нет</td></tr>{% endfor %}</tbody></table></div></div></div>{% if current_user.role.value == 'super_admin' %}<div class="col-xl-4"><div class="panel p-4"><h3>Создать агентство</h3><form method="post" action="/agencies"><label class="form-label">Название</label><input class="form-control mb-3" name="name" required><label class="form-label">Контактные данные</label><textarea class="form-control mb-3" name="contact_info" rows="4"></textarea><button class="btn btn-primary w-100">Создать</button></form></div></div>{% endif %}</div>{% endblock %}
-
+{% extends "base.html" %}
+{% block page_title %}Настройки{% endblock %}
+{% block page_subtitle %}Агентства и параметры системы{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-xl-8"><div class="panel"><div class="panel-head"><h3>Агентства</h3></div><div class="p-3">
+    {% for a in agencies %}<form class="border rounded-3 p-3 mb-3" method="post" action="/agencies/{{ a.id }}/edit"><div class="row g-2 align-items-end">
+      <div class="col-md-4"><label class="form-label">Название</label><input class="form-control" name="name" value="{{ a.name }}" required></div>
+      <div class="col-md-5"><label class="form-label">Контакты</label><input class="form-control" name="contact_info" value="{{ a.contact_info or '' }}"></div>
+      <div class="col-md-1 text-center"><small class="text-secondary">{{ a.users|length }} чел.</small></div>
+      <div class="col-md-2"><button class="btn btn-outline-primary w-100">Сохранить</button></div>
+    </div></form>{% else %}<div class="empty">Агентств пока нет</div>{% endfor %}
+  </div></div></div>
+  {% if current_user.role.value == 'super_admin' %}<div class="col-xl-4"><div class="panel p-4"><h3>Создать агентство</h3><form method="post" action="/agencies"><label class="form-label">Название</label><input class="form-control mb-3" name="name" required><label class="form-label">Контактные данные</label><textarea class="form-control mb-3" name="contact_info" rows="4"></textarea><button class="btn btn-primary w-100">Создать</button></form></div></div>{% endif %}
+  <div class="col-xl-4"><div class="panel p-4"><h3>Изменить пароль</h3><form method="post" action="/profile/password"><label class="form-label">Текущий пароль</label><input class="form-control mb-3" type="password" name="current_password" required><label class="form-label">Новый пароль</label><input class="form-control mb-3" type="password" name="new_password" minlength="10" required><label class="form-label">Повторите новый пароль</label><input class="form-control mb-3" type="password" name="new_password_confirm" minlength="10" required><button class="btn btn-outline-primary w-100">Изменить пароль</button></form></div></div>
+</div>
+{% endblock %}

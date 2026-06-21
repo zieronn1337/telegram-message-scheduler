@@ -1,3 +1,24 @@
-{% extends "base.html" %}{% block page_title %}Пользователи{% endblock %}{% block page_subtitle %}Доступ сотрудников к панели{% endblock %}
-{% block content %}<div class="row g-4"><div class="col-xl-8"><div class="panel"><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Пользователь</th><th>Роль</th><th>Агентство</th><th>Статус</th></tr></thead><tbody>{% for u in users %}<tr><td><b>{{u.username}}</b><small class="d-block">{{u.email or '—'}}</small></td><td>{{u.role.value}}</td><td>{{u.agency.name if u.agency else 'Системный'}}</td><td><span class="badge status-sent">{{'Активен' if u.is_active else 'Отключён'}}</span></td></tr>{% endfor %}</tbody></table></div></div></div><div class="col-xl-4"><div class="panel p-4"><h3>Новый пользователь</h3><form method="post" action="/users"><label class="form-label">Логин</label><input class="form-control mb-3" name="username" required minlength="3"><label class="form-label">Email</label><input class="form-control mb-3" type="email" name="email"><label class="form-label">Пароль</label><input class="form-control mb-3" type="password" name="password" required minlength="8"><label class="form-label">Роль</label><select class="form-select mb-3" name="role">{% if current_user.role.value == 'super_admin' %}<option value="super_admin">Super Admin</option>{% endif %}<option value="agency_admin">Agency Admin</option><option value="manager">Manager</option></select>{% if current_user.role.value == 'super_admin' %}<label class="form-label">Агентство</label><select class="form-select mb-3" name="agency_id"><option value="">Системный пользователь</option>{% for a in agencies %}<option value="{{a.id}}">{{a.name}}</option>{% endfor %}</select>{% endif %}<button class="btn btn-primary w-100">Создать</button></form></div></div></div>{% endblock %}
-
+{% extends "base.html" %}
+{% block page_title %}Пользователи{% endblock %}
+{% block page_subtitle %}Доступ сотрудников к панели{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-xl-8"><div class="panel"><div class="table-responsive"><table class="table align-middle">
+    <thead><tr><th>Пользователь</th><th>Роль</th><th>Агентство</th><th>Статус</th><th></th></tr></thead>
+    <tbody>{% for u in users %}<tr>
+      <td><b>{{ u.username }}</b><small class="d-block">{{ u.email or '—' }}</small></td>
+      <td>{{ u.role.value }}</td><td>{{ u.agency.name if u.agency else 'Системный' }}</td>
+      <td><span class="badge {{ 'status-sent' if u.is_active else 'status-cancelled' }}">{{ 'Активен' if u.is_active else 'Отключён' }}</span></td>
+      <td>{% if u.id != current_user.id %}<form method="post" action="/users/{{ u.id }}/toggle"><button class="btn btn-light btn-sm">{{ 'Отключить' if u.is_active else 'Включить' }}</button></form>{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div></div></div>
+  <div class="col-xl-4"><div class="panel p-4"><h3>Новый пользователь</h3><form method="post" action="/users">
+    <label class="form-label">Логин</label><input class="form-control mb-3" name="username" required minlength="3">
+    <label class="form-label">Email</label><input class="form-control mb-3" type="email" name="email">
+    <label class="form-label">Пароль</label><input class="form-control mb-3" type="password" name="password" required minlength="8">
+    <label class="form-label">Роль</label><select class="form-select mb-3" name="role">{% if current_user.role.value == 'super_admin' %}<option value="super_admin">Super Admin</option>{% endif %}<option value="agency_admin">Agency Admin</option><option value="manager">Manager</option></select>
+    {% if current_user.role.value == 'super_admin' %}<label class="form-label">Агентство</label><select class="form-select mb-3" name="agency_id"><option value="">Для Super Admin не требуется</option>{% for a in agencies %}<option value="{{ a.id }}">{{ a.name }}</option>{% endfor %}</select>{% endif %}
+    <button class="btn btn-primary w-100">Создать</button>
+  </form></div></div>
+</div>
+{% endblock %}

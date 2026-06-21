@@ -8,7 +8,7 @@
     <div class="panel">
       <div class="panel-head">
         <h3>Подключённые каналы</h3>
-        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#channelModal" {{ 'disabled' if not bots }}>Добавить канал</button>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#channelModal" {{ 'disabled' if not has_active_bots }}>Добавить канал</button>
       </div>
       <div class="table-responsive">
         <table class="table align-middle">
@@ -53,6 +53,17 @@
       <hr>
       <small class="text-secondary"><b>Перед подключением:</b> добавьте бота администратором канала с правом публикации.</small>
     </div>
+    {% if bots %}
+    <div class="panel p-4 mt-4">
+      <h3>Подключённые боты</h3>
+      {% for bot in bots %}
+      <div class="d-flex align-items-center justify-content-between border-bottom py-2">
+        <div><b>{{ bot.name }}</b><small class="d-block text-secondary">@{{ bot.username or 'без username' }}</small></div>
+        <form method="post" action="/bots/{{ bot.id }}/toggle"><button class="btn btn-sm {{ 'btn-outline-danger' if bot.is_active else 'btn-outline-success' }}">{{ 'Отключить' if bot.is_active else 'Включить' }}</button></form>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
   </div>
 </div>
 
@@ -62,7 +73,7 @@
       <div class="modal-header"><h5>Добавить канал</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
       <div class="modal-body">
         <label class="form-label">Бот</label>
-        <select class="form-select mb-3" name="bot_id" required>{% for bot in bots %}<option value="{{ bot.id }}">{{ bot.name }} @{{ bot.username }}</option>{% endfor %}</select>
+        <select class="form-select mb-3" name="bot_id" required>{% for bot in bots if bot.is_active %}<option value="{{ bot.id }}">{{ bot.name }} @{{ bot.username }}</option>{% endfor %}</select>
         <label class="form-label">Username или chat_id</label>
         <input class="form-control mb-3" name="chat_id" placeholder="@channel или -100..." required>
         <label class="form-label">Название (необязательно)</label>
