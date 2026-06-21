@@ -28,6 +28,19 @@ def test_web_login_and_dashboard():
         assert "Dashboard" in response.text
 
 
+def test_bot_form_rejects_unknown_agency_without_database_error():
+    with TestClient(app) as client:
+        client.post("/login", data={"username": "testadmin", "password": "testpassword"})
+        response = client.post(
+            "/bots",
+            data={"name": "Test bot", "token": "not-sent-to-telegram", "agency_id": "123"},
+            follow_redirects=True,
+        )
+        assert response.status_code == 200
+        assert "Выбранное агентство не найдено" in response.text
+        assert "ForeignKeyViolation" not in response.text
+
+
 def teardown_module():
     from app.database import engine
 

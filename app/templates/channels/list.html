@@ -1,4 +1,75 @@
-{% extends "base.html" %}{% block page_title %}Каналы{% endblock %}{% block page_subtitle %}Боты и доступные Telegram-каналы{% endblock %}
-{% block content %}<div class="row g-4"><div class="col-xl-8"><div class="panel"><div class="panel-head"><h3>Подключённые каналы</h3><button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#channelModal">Добавить канал</button></div><div class="table-responsive"><table class="table align-middle"><thead><tr><th>Канал</th><th>Chat ID</th><th>Бот</th><th>Статус</th><th></th></tr></thead><tbody>{% for channel in channels %}<tr><td><b>{{ channel.title }}</b></td><td><code>{{ channel.chat_id }}</code></td><td>@{{ channel.bot.username or channel.bot.name }}</td><td><span class="badge {{ 'status-sent' if channel.is_active else 'status-cancelled' }}">{{ 'Активен' if channel.is_active else 'Отключён' }}</span></td><td><form method="post" action="/channels/{{channel.id}}/toggle"><button class="btn btn-light btn-sm"><i class="bi bi-power"></i></button></form></td></tr>{% else %}<tr><td colspan="5" class="text-center py-5 text-secondary">Добавьте бота, затем подключите канал</td></tr>{% endfor %}</tbody></table></div></div></div><div class="col-xl-4"><div class="panel p-4"><h3>Подключить бота</h3><p class="text-secondary small">Токен проверяется через Telegram и сохраняется в зашифрованном виде.</p><form method="post" action="/bots"><label class="form-label">Название</label><input class="form-control mb-3" name="name" required><label class="form-label">Bot Token</label><input class="form-control mb-3" type="password" name="token" required>{% if current_user.role.value == 'super_admin' %}<label class="form-label">ID агентства</label><input class="form-control mb-3" type="number" name="agency_id" required>{% endif %}<button class="btn btn-outline-primary w-100">Проверить и сохранить</button></form><hr><small class="text-secondary"><b>Перед подключением:</b> добавьте бота администратором канала с правом публикации.</small></div></div></div>
-<div class="modal fade" id="channelModal"><div class="modal-dialog"><form class="modal-content" method="post" action="/channels"><div class="modal-header"><h5>Добавить канал</h5><button class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><label class="form-label">Бот</label><select class="form-select mb-3" name="bot_id" required>{% for bot in bots %}<option value="{{bot.id}}">{{bot.name}} @{{bot.username}}</option>{% endfor %}</select><label class="form-label">Username или chat_id</label><input class="form-control mb-3" name="chat_id" placeholder="@channel или -100..." required><label class="form-label">Название (необязательно)</label><input class="form-control" name="title"></div><div class="modal-footer"><button class="btn btn-light" data-bs-dismiss="modal" type="button">Отмена</button><button class="btn btn-primary">Проверить доступ</button></div></form></div></div>{% endblock %}
+{% extends "base.html" %}
+{% block page_title %}Каналы{% endblock %}
+{% block page_subtitle %}Боты и доступные Telegram-каналы{% endblock %}
 
+{% block content %}
+<div class="row g-4">
+  <div class="col-xl-8">
+    <div class="panel">
+      <div class="panel-head">
+        <h3>Подключённые каналы</h3>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#channelModal" {{ 'disabled' if not bots }}>Добавить канал</button>
+      </div>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead><tr><th>Канал</th><th>Chat ID</th><th>Бот</th><th>Статус</th><th></th></tr></thead>
+          <tbody>
+          {% for channel in channels %}
+            <tr>
+              <td><b>{{ channel.title }}</b></td>
+              <td><code>{{ channel.chat_id }}</code></td>
+              <td>@{{ channel.bot.username or channel.bot.name }}</td>
+              <td><span class="badge {{ 'status-sent' if channel.is_active else 'status-cancelled' }}">{{ 'Активен' if channel.is_active else 'Отключён' }}</span></td>
+              <td><form method="post" action="/channels/{{ channel.id }}/toggle"><button class="btn btn-light btn-sm"><i class="bi bi-power"></i></button></form></td>
+            </tr>
+          {% else %}
+            <tr><td colspan="5" class="text-center py-5 text-secondary">Добавьте бота, затем подключите канал</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-xl-4">
+    <div class="panel p-4">
+      <h3>Подключить бота</h3>
+      <p class="text-secondary small">Токен проверяется через Telegram и сохраняется в зашифрованном виде.</p>
+      <form method="post" action="/bots">
+        <label class="form-label">Название</label>
+        <input class="form-control mb-3" name="name" required>
+        <label class="form-label">Bot Token</label>
+        <input class="form-control mb-3" type="password" name="token" required>
+        {% if current_user.role.value == 'super_admin' %}
+          <label class="form-label">Агентство</label>
+          <select class="form-select mb-3" name="agency_id" required>
+            <option value="">Выберите агентство</option>
+            {% for agency in agencies %}<option value="{{ agency.id }}">{{ agency.name }}</option>{% endfor %}
+          </select>
+          {% if not agencies %}<div class="alert alert-warning py-2 small">Сначала <a href="/settings">создайте агентство</a>.</div>{% endif %}
+        {% endif %}
+        <button class="btn btn-outline-primary w-100" {{ 'disabled' if current_user.role.value == 'super_admin' and not agencies }}>Проверить и сохранить</button>
+      </form>
+      <hr>
+      <small class="text-secondary"><b>Перед подключением:</b> добавьте бота администратором канала с правом публикации.</small>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="channelModal">
+  <div class="modal-dialog">
+    <form class="modal-content" method="post" action="/channels">
+      <div class="modal-header"><h5>Добавить канал</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <label class="form-label">Бот</label>
+        <select class="form-select mb-3" name="bot_id" required>{% for bot in bots %}<option value="{{ bot.id }}">{{ bot.name }} @{{ bot.username }}</option>{% endfor %}</select>
+        <label class="form-label">Username или chat_id</label>
+        <input class="form-control mb-3" name="chat_id" placeholder="@channel или -100..." required>
+        <label class="form-label">Название (необязательно)</label>
+        <input class="form-control" name="title">
+      </div>
+      <div class="modal-footer"><button class="btn btn-light" data-bs-dismiss="modal" type="button">Отмена</button><button class="btn btn-primary">Проверить доступ</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}

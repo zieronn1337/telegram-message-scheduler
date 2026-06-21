@@ -86,7 +86,8 @@ def channel_list(request: Request, db: Session = Depends(get_db)):
     if isinstance(user, RedirectResponse): return user
     channels = scoped(db.query(TelegramChannel), TelegramChannel, user).order_by(TelegramChannel.title).all()
     bots = scoped(db.query(TelegramBot), TelegramBot, user).filter(TelegramBot.is_active.is_(True)).all()
-    return templates.TemplateResponse(request, "channels/list.html", context(request, user, channels=channels, bots=bots))
+    agencies = db.query(Agency).order_by(Agency.name).all() if user.role == UserRole.SUPER_ADMIN else []
+    return templates.TemplateResponse(request, "channels/list.html", context(request, user, channels=channels, bots=bots, agencies=agencies))
 
 
 @router.post("/bots")
@@ -96,12 +97,19 @@ async def bot_add(request: Request, name: str = Form(), token: str = Form(), age
     target_agency = agency_id if user.role == UserRole.SUPER_ADMIN and agency_id else user.agency_id
     if not target_agency:
         flash(request, "Сначала создайте агентство", "danger"); return RedirectResponse("/settings", 303)
+    if not db.get(Agency, target_agency):
+        flash(request, "Выбранное агентство не найдено. Сначала создайте его в настройках.", "danger")
+        return RedirectResponse("/channels", 303)
     try:
         info = await verify_token(token.strip())
         db.add(TelegramBot(agency_id=target_agency, name=name, username=info.get("username"), encrypted_token=encrypt_token(token.strip())))
         db.commit(); flash(request, f"Бот @{info.get('username', name)} подключен")
-    except Exception as exc:
-        flash(request, str(exc), "danger")
+    except TelegramError as exc:
+        db.rollback()
+        flash(request, f"Telegram не принял токен: {exc}", "danger")
+    except Exception:
+        db.rollback()
+        flash(request, "Не удалось сохранить бота. Проверьте данные или повторите попытку позже.", "danger")
     return RedirectResponse("/channels", 303)
 
 
