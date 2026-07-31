@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 3,
+  "version": 2,
   "builds": [
     { "src": "api/index.py", "use": "@vercel/python" }
   ],
