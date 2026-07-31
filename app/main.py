@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from .api import router as api_router
@@ -59,6 +60,7 @@ app.add_middleware(
     https_only=settings.is_serverless,
     max_age=43200,
 )
+
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.include_router(api_router)
 app.include_router(web_router)
