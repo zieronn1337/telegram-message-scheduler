@@ -1,3 +1,40 @@
 {% extends "base.html" %}{% block title %}Вход — TelePlan{% endblock %}
-{% block auth_content %}<div class="login-page"><div class="login-card"><div class="brand justify-content-center mb-4"><span class="brand-icon"><i class="bi bi-send-fill"></i></span><span>TelePlan</span></div><h2>Вход в панель</h2><p class="text-secondary">Управляйте публикациями Telegram в одном месте</p>{% if flash %}<div class="alert alert-{{ flash.category }}">{{ flash.message }}</div>{% endif %}<form method="post" action="/login"><label class="form-label">Логин</label><input class="form-control mb-3" name="username" required autofocus><label class="form-label">Пароль</label><input class="form-control mb-4" type="password" name="password" required><button class="btn btn-primary w-100 py-2">Войти</button></form></div></div>{% endblock %}
+{% block auth_content %}
+<div class="login-page">
+  <div class="login-brand-panel">
+    <div class="login-brand-content">
+      <div class="brand"><span class="brand-icon"><i class="bi bi-send-fill"></i></span><span>TelePlan</span></div>
+      <h2 class="login-headline">Premium workspace для Telegram-публикаций</h2>
+      <p class="login-subhead">Планируйте, отправляйте и отслеживайте публикации в одном спокойном и надежном интерфейсе.</p>
+      <div class="login-visual">
+        <div class="login-timeline">
+          <div class="login-timeline-item"><span class="dot-pulse"></span><div><strong>Автоматизация</strong><br>Сценарии работают без лишних действий.</div></div>
+          <div class="login-timeline-item"><span class="dot-pulse"></span><div><strong>Синхронизация</strong><br>Каналы и посты всегда в одном контексте.</div></div>
+          <div class="login-timeline-item"><span class="dot-pulse"></span><div><strong>Контроль</strong><br>Следите за статусами и своевременностью отправки.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="login-form-panel">
+    <div class="login-card">
+      <div class="login-card-inner">
+        <div class="brand"><span class="brand-icon"><i class="bi bi-send-fill"></i></span><span>TelePlan</span></div>
+        <h2>Добро пожаловать</h2>
+        <p class="login-lead">Войдите в свой рабочий пространство TelePlan.</p>
+        {% if flash %}<div class="alert alert-{{ flash.category }}">{{ flash.message }}</div>{% endif %}
+        <form method="post" action="/login">
+          <label class="form-label" for="username">Логин</label>
+          <input class="form-control mb-3" id="username" name="username" required autofocus>
+          <label class="form-label" for="password">Пароль</label>
+          <div class="password-field">
+            <input class="form-control mb-4" id="password" type="password" name="password" required>
+            <button class="password-toggle" type="button" aria-label="Показать пароль"><i class="bi bi-eye"></i></button>
+          </div>
+          <button class="btn btn-primary w-100">Войти</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
 

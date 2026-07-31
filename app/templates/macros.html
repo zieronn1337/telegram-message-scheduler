@@ -1,0 +1,44 @@
+{# Shared UI macros for TelePlan #}
+
+{% macro status_label(status) -%}
+{%- set s = status.value if status.value is defined else status -%}
+{%- if s == 'draft' -%}Черновик
+{%- elif s == 'scheduled' -%}Запланировано
+{%- elif s == 'processing' -%}Отправка
+{%- elif s == 'sent' -%}Опубликовано
+{%- elif s == 'error' -%}Ошибка
+{%- elif s == 'cancelled' -%}Отменено
+{%- else -%}{{ s }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro status_badge(status) -%}
+{%- set s = status.value if status.value is defined else status -%}
+<span class="badge status-{{ s }}">{{ status_label(s) }}</span>
+{%- endmacro %}
+
+{% macro role_label(role) -%}
+{%- set r = role.value if role.value is defined else role -%}
+{%- if r == 'super_admin' -%}Super Admin
+{%- elif r == 'agency_admin' -%}Админ агентства
+{%- elif r == 'manager' -%}Менеджер
+{%- else -%}{{ r|replace('_', ' ') }}
+{%- endif -%}
+{%- endmacro %}
+
+{% macro empty_state(icon, title, text, cta_href='', cta_label='') -%}
+<div class="empty-state">
+  <div class="empty-state-icon"><i class="bi bi-{{ icon }}"></i></div>
+  <h3 class="empty-state-title">{{ title }}</h3>
+  {% if text %}<p class="empty-state-text">{{ text }}</p>{% endif %}
+  {% if cta_href %}<a class="btn btn-primary btn-sm" href="{{ cta_href }}">{{ cta_label }}</a>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro avatar(name, size='md') -%}
+<span class="avatar avatar-{{ size }}" aria-hidden="true">{{ (name or '?')[0]|upper }}</span>
+{%- endmacro %}
+
+{% macro channel_avatar(title) -%}
+<span class="channel-avatar" aria-hidden="true">{{ (title or '?')[0]|upper }}</span>
+{%- endmacro %}

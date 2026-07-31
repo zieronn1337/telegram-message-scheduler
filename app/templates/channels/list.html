@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block page_title %}Каналы{% endblock %}
-{% block page_subtitle %}Боты и доступные Telegram-каналы{% endblock %}
+{% block page_subtitle %}Telegram-каналы, статусы подключения и доступные боты{% endblock %}
 
 {% block content %}
 <div class="row g-4">
@@ -10,31 +10,39 @@
         <h3>Подключённые каналы</h3>
         <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#channelModal" {{ 'disabled' if not has_active_bots }}>Добавить канал</button>
       </div>
-      <div class="table-responsive">
-        <table class="table align-middle">
-          <thead><tr><th>Канал</th><th>Chat ID</th><th>Бот</th><th>Статус</th><th></th></tr></thead>
-          <tbody>
-          {% for channel in channels %}
-            <tr>
-              <td><b>{{ channel.title }}</b></td>
-              <td><code>{{ channel.chat_id }}</code></td>
-              <td>@{{ channel.bot.username or channel.bot.name }}</td>
-              <td><span class="badge {{ 'status-sent' if channel.is_active else 'status-cancelled' }}">{{ 'Активен' if channel.is_active else 'Отключён' }}</span></td>
-              <td><form method="post" action="/channels/{{ channel.id }}/toggle"><button class="btn btn-light btn-sm"><i class="bi bi-power"></i></button></form></td>
-            </tr>
-          {% else %}
-            <tr><td colspan="5" class="text-center py-5 text-secondary">Добавьте бота, затем подключите канал</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
+      {% if channels %}
+      <div class="channel-list">
+        {% for channel in channels %}
+        <div class="channel-card">
+          <div class="channel-avatar">{{ channel.title[:1]|upper }}</div>
+          <div class="channel-card-info">
+            <div class="name">{{ channel.title }}</div>
+            <div class="meta">
+              <span>@{{ channel.bot.username or channel.bot.name }}</span>
+              <span>{{ channel.chat_id }}</span>
+            </div>
+          </div>
+          <div class="channel-card-actions">
+            <span class="badge {{ 'status-sent' if channel.is_active else 'status-cancelled' }}">{{ 'Активен' if channel.is_active else 'Отключён' }}</span>
+            <form method="post" action="/channels/{{ channel.id }}/toggle"><button class="btn btn-light btn-sm" type="submit"><i class="bi bi-power"></i></button></form>
+          </div>
+        </div>
+        {% endfor %}
       </div>
+      {% else %}
+      <div class="empty-state compact">
+        <div class="empty-state-icon"><i class="bi bi-broadcast"></i></div>
+        <h3 class="empty-state-title">Каналы ещё не подключены</h3>
+        <p class="empty-state-text">Добавьте первый Telegram-канал и начните публикации.</p>
+      </div>
+      {% endif %}
     </div>
   </div>
 
   <div class="col-xl-4">
     <div class="panel p-4">
       <h3>Подключить бота</h3>
-      <p class="text-secondary small">Токен проверяется через Telegram и сохраняется в зашифрованном виде.</p>
+      <p class="text-secondary small">Токен проверяется и сохраняется в защищённом виде.</p>
       <form method="post" action="/bots">
         <label class="form-label">Название</label>
         <input class="form-control mb-3" name="name" required>
@@ -57,9 +65,12 @@
     <div class="panel p-4 mt-4">
       <h3>Подключённые боты</h3>
       {% for bot in bots %}
-      <div class="d-flex align-items-center justify-content-between border-bottom py-2">
-        <div><b>{{ bot.name }}</b><small class="d-block text-secondary">@{{ bot.username or 'без username' }}</small></div>
-        <form method="post" action="/bots/{{ bot.id }}/toggle"><button class="btn btn-sm {{ 'btn-outline-danger' if bot.is_active else 'btn-outline-success' }}">{{ 'Отключить' if bot.is_active else 'Включить' }}</button></form>
+      <div class="bot-row">
+        <div>
+          <b>{{ bot.name }}</b>
+          <small class="d-block text-secondary">@{{ bot.username or 'без username' }}</small>
+        </div>
+        <form method="post" action="/bots/{{ bot.id }}/toggle"><button class="btn btn-sm {{ 'btn-outline-danger' if bot.is_active else 'btn-outline-success' }}" type="submit">{{ 'Отключить' if bot.is_active else 'Включить' }}</button></form>
       </div>
       {% endfor %}
     </div>

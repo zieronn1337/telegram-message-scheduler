@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% block page_title %}Расписание{% endblock %}
-{% block page_subtitle %}Все публикации и черновики{% endblock %}
+{% block page_subtitle %}Публикации, черновики и состояние очереди{% endblock %}
 {% block content %}
 <div class="panel">
+  <div class="panel-head">
+    <h3>Публикации</h3>
+    <a href="/posts/new">Создать новый</a>
+  </div>
   <form class="filters" method="get">
     <input class="form-control" name="search" value="{{ filters.search }}" placeholder="Поиск по тексту">
     <select class="form-select" name="channel_id"><option value="">Все каналы</option>{% for channel in channels %}<option value="{{ channel.id }}" {{ 'selected' if filters.channel_id == channel.id }}>{{ channel.title }}</option>{% endfor %}</select>
@@ -12,9 +16,9 @@
   <div class="table-responsive"><table class="table align-middle">
     <thead><tr><th>Публикация</th><th>Канал</th><th>Дата</th><th>Статус</th><th></th></tr></thead>
     <tbody>{% for post in posts %}<tr>
-      <td><b>{{ post.text|striptags|truncate(65) or 'Медиа-публикация' }}</b><small class="d-block">{{ post.media|length }} медиа · {{ post.author.username }}</small></td>
+      <td><div class="post-title">{{ post.text|striptags|truncate(70) or 'Медиа-публикация' }}</div><small class="d-block">{{ post.media|length }} медиа · {{ post.author.username }}</small></td>
       <td>{{ post.channel.title }}</td><td>{{ post.scheduled_at.strftime('%d.%m.%Y %H:%M') if post.scheduled_at else 'Не задано' }}</td>
-      <td><span class="badge status-{{ post.status.value }}">{{ post.status.value }}</span>{% if post.error_message %}<i class="bi bi-info-circle text-danger" title="{{ post.error_message }}"></i>{% endif %}</td>
+      <td><span class="badge status-{{ post.status.value }}">{{ post.status.value }}</span>{% if post.error_message %}<i class="bi bi-info-circle text-danger ms-2" title="{{ post.error_message }}"></i>{% endif %}</td>
       <td><div class="dropdown"><button class="btn btn-light btn-sm" data-bs-toggle="dropdown"><i class="bi bi-three-dots"></i></button><div class="dropdown-menu dropdown-menu-end">
         {% if post.status.value not in ['sent', 'processing'] %}<a class="dropdown-item" href="/posts/{{ post.id }}/edit">Редактировать</a>{% endif %}
         <form method="post" action="/posts/{{ post.id }}/action">
@@ -24,7 +28,7 @@
           {% if post.status.value not in ['sent', 'processing'] %}<button class="dropdown-item text-danger" name="action" value="delete" onclick="return confirm('Удалить публикацию?')">Удалить</button>{% endif %}
         </form>
       </div></div></td>
-    </tr>{% else %}<tr><td colspan="5"><div class="empty"><i class="bi bi-inbox"></i><p>Публикации не найдены</p></div></td></tr>{% endfor %}</tbody>
+    </tr>{% else %}<tr><td colspan="5"><div class="empty-state compact"><div class="empty-state-icon"><i class="bi bi-inbox"></i></div><h3 class="empty-state-title">Публикации не найдены</h3><p class="empty-state-text">Измените фильтры или создайте первую публикацию.</p></div></td></tr>{% endfor %}</tbody>
   </table></div>
 </div>
 {% endblock %}

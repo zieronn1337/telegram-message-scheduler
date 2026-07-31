@@ -1,4 +1,89 @@
-{% extends "base.html" %}{% block page_title %}Создать пост{% endblock %}{% block page_subtitle %}Подготовьте публикацию и выберите время отправки{% endblock %}
-{% block content %}<form method="post" enctype="multipart/form-data"><div class="row g-4"><div class="col-xl-8"><div class="panel p-4"><label class="form-label">Telegram-канал</label><select class="form-select mb-4" name="channel_id" required><option value="">Выберите канал</option>{% for channel in channels %}<option value="{{channel.id}}">{{channel.title}}</option>{% endfor %}</select><label class="form-label">Текст сообщения</label><div class="editor-toolbar"><button type="button" onclick="wrapText('<b>','</b>')"><b>B</b></button><button type="button" onclick="wrapText('<i>','</i>')"><i>I</i></button><button type="button" onclick="wrapText('<a href=&quot;https://&quot;>','</a>')"><i class="bi bi-link-45deg"></i></button></div><textarea class="form-control post-editor" name="text" id="postText" rows="9" maxlength="4096" oninput="preview()"></textarea><div class="text-end small text-secondary"><span id="counter">0</span>/4096</div><label class="form-label mt-3">Медиафайлы</label><label class="upload-box"><i class="bi bi-cloud-arrow-up"></i><b>Выберите фото, видео или документы</b><small>До 10 файлов, максимум {{ settings.max_upload_mb if settings else 50 }} МБ каждый</small><input type="file" name="media" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="showFiles(this)"></label><div id="fileList" class="small mt-2"></div><div class="row g-3 mt-2"><div class="col-md-5"><label class="form-label">Текст кнопки</label><input class="form-control" name="button_text" id="buttonText" placeholder="Подробнее" oninput="preview()"></div><div class="col-md-7"><label class="form-label">Ссылка кнопки</label><input class="form-control" type="url" name="button_url" placeholder="https://example.com"></div></div></div></div>
-<div class="col-xl-4"><div class="panel p-4 mb-4"><h3>Планирование</h3><label class="form-label">Дата и время</label><input class="form-control mb-3" type="datetime-local" name="scheduled_local"><label class="form-label">Часовой пояс</label><select class="form-select" name="timezone_name">{% for tz in timezones %}<option {{'selected' if tz==default_timezone}}>{{tz}}</option>{% endfor %}</select></div><div class="panel p-4 mb-4"><h3>Предпросмотр</h3><div class="telegram-preview"><div class="preview-name">Название канала</div><div id="previewText" class="preview-text">Текст публикации появится здесь</div><button id="previewButton" class="preview-button d-none" type="button"></button><small>12:00 ✓✓</small></div></div><div class="d-grid gap-2"><button class="btn btn-primary" name="action" value="schedule">Запланировать</button><button class="btn btn-outline-primary" name="action" value="send">Отправить сейчас</button><button class="btn btn-light" name="action" value="draft">Сохранить черновик</button></div></div></div></form>{% endblock %}
+{% extends "base.html" %}{% block page_title %}Создать пост{% endblock %}{% block page_subtitle %}Подготовьте публикацию, выберите канал и отправьте в нужное время{% endblock %}
+{% block content %}
+<div class="page-hero panel compact">
+  <div>
+    <div class="hero-kicker">Composer</div>
+    <h2>Новый публикационный сценарий</h2>
+    <p>Соберите сообщение, проверьте превью и отправьте его в нужный момент.</p>
+  </div>
+</div>
+<form method="post" enctype="multipart/form-data">
+  <div class="composer-tabs" role="tablist" aria-label="Режим редактора">
+    <button class="active" type="button" data-tab="editor">Редактор</button>
+    <button type="button" data-tab="preview">Превью</button>
+  </div>
+  <div class="composer-layout">
+    <div class="composer-main" data-panel="editor">
+      <div class="composer-section">
+        <label class="form-label">Telegram-канал</label>
+        <select class="form-select mb-4" name="channel_id" required>
+          <option value="">Выберите канал</option>
+          {% for channel in channels %}<option value="{{channel.id}}">{{channel.title}}</option>{% endfor %}
+        </select>
+        <label class="form-label">Текст сообщения</label>
+        <div class="editor-toolbar">
+          <button type="button" onclick="wrapText('<b>','</b>')"><b>B</b></button>
+          <button type="button" onclick="wrapText('<i>','</i>')"><i>I</i></button>
+          <button type="button" onclick="wrapText('<a href=&quot;https://&quot;>','</a>')"><i class="bi bi-link-45deg"></i></button>
+        </div>
+        <textarea class="form-control post-editor" name="text" id="postText" rows="9" maxlength="4096" oninput="preview()" placeholder="Напишите сообщение для Telegram"></textarea>
+        <div class="char-counter"><span id="counter">0</span>/4096</div>
+      </div>
+      <div class="composer-section">
+        <h3 class="composer-section-title">Медиа</h3>
+        <label class="upload-box">
+          <i class="bi bi-cloud-arrow-up"></i>
+          <b>Добавьте фото, видео или документ</b>
+          <small>До 10 файлов, максимум {{ settings.max_upload_mb if settings else 50 }} МБ каждый</small>
+          <input type="file" name="media" multiple accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx" onchange="showFiles(this)">
+        </label>
+        <div id="fileList" class="file-list"></div>
+      </div>
+      <div class="composer-section">
+        <h3 class="composer-section-title">Кнопка действия</h3>
+        <div class="row g-3">
+          <div class="col-md-5">
+            <label class="form-label">Текст кнопки</label>
+            <input class="form-control" name="button_text" id="buttonText" placeholder="Подробнее" oninput="preview()">
+          </div>
+          <div class="col-md-7">
+            <label class="form-label">Ссылка кнопки</label>
+            <input class="form-control" type="url" name="button_url" placeholder="https://example.com">
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="composer-side" data-panel="preview">
+      <div class="composer-section">
+        <h3 class="composer-section-title">Планирование</h3>
+        <label class="form-label">Дата и время</label>
+        <input class="form-control mb-3" type="datetime-local" name="scheduled_local">
+        <label class="form-label">Часовой пояс</label>
+        <select class="form-select" name="timezone_name">{% for tz in timezones %}<option {{'selected' if tz==default_timezone}}>{{tz}}</option>{% endfor %}</select>
+      </div>
+      <div class="composer-section">
+        <h3 class="composer-section-title">Предпросмотр</h3>
+        <div class="telegram-preview">
+          <div class="tg-message">
+            <div class="tg-header">
+              <div class="tg-avatar">TC</div>
+              <div>
+                <div class="tg-name">Название канала</div>
+                <div class="tg-time">12:00</div>
+              </div>
+            </div>
+            <div id="previewText" class="tg-text is-placeholder">Текст публикации появится здесь</div>
+            <button id="previewButton" class="tg-button d-none" type="button"></button>
+          </div>
+        </div>
+      </div>
+      <div class="composer-actions">
+        <button class="btn btn-primary" name="action" value="schedule">Запланировать</button>
+        <button class="btn btn-outline-primary" name="action" value="send">Отправить сейчас</button>
+        <button class="btn btn-secondary" name="action" value="draft">Сохранить черновик</button>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
 {% block scripts %}<script src="/static/js/editor.js"></script>{% endblock %}
